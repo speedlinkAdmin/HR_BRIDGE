@@ -213,7 +213,7 @@ calculateTotalHours(checkIn, checkOut) {
         let action;
         if (existing) {
           await db.Timesheet.update(
-            { check_in, check_out, total_hours, updated_at: new Date() },
+            { check_in, check_out, total_hours, updatedAt: new Date() },
             { where: { id: existing.id } }
           );
           action = 'updated';
@@ -441,35 +441,106 @@ calculateTotalHours(checkIn, checkOut) {
   // }
 
   // === Optional: Get all timesheets ===
+  // async getAllTimesheets(req, res) {
+  //   try {
+  //     const timesheets = await db.Timesheet.findAll({
+  //       include: [{
+  //         model: db.Employee,
+  //         as: 'employee',
+  //         attributes: ['first_name', 'middle_name', 'last_name', 'mapped_id']
+  //       }],
+  //       order: [['date', 'DESC']]
+  //     });
+  //     res.json(timesheets);
+  //   } catch (error) {
+  //     res.status(500).json({ error: 'Failed to fetch timesheets' });
+  //   }
+  // }
+
   async getAllTimesheets(req, res) {
-    try {
-      const timesheets = await db.Timesheet.findAll({
-        include: [{
-          model: db.Employee,
-          as: 'employee',
-          attributes: ['first_name', 'middle_name', 'last_name', 'mapped_id']
-        }],
-        order: [['date', 'DESC']]
-      });
-      res.json(timesheets);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch timesheets' });
-    }
+  try {
+    const timesheets = await db.Timesheet.findAll({
+      include: [{
+        model: db.Employee,
+        as: 'employee',
+        attributes: ['first_name', 'middle_name', 'last_name']
+      }],
+      order: [['date', 'DESC'], ['created_at', 'DESC']]
+    });
+
+    const formatted = timesheets.map(t => ({
+      id: t.id,
+      employee_id: t.employee_id,
+      employee_name: `${t.employee.first_name} ${t.employee.middle_name ? t.employee.middle_name + ' ' : ''}${t.employee.last_name}`.trim(),
+      date: t.date,
+      check_in: t.check_in,
+      check_out: t.check_out,
+      total_hours: t.total_hours,
+      created_at: t.created_at,
+      updated_at: t.updated_at
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error fetching all timesheets:', error);
+    res.status(500).json({ error: 'Failed to fetch timesheets' });
   }
+}
+
+
+async getTimesheetsByEmployee(req, res) {
+  try {
+    const { employee_id } = req.body;
+
+    const timesheets = await db.Timesheet.findAll({
+      where: { employee_id },
+      include: [{
+        model: db.Employee,
+        as: 'employee',
+        attributes: ['first_name', 'middle_name', 'last_name']
+      }],
+      order: [['date', 'DESC']]
+    });
+
+    if (!timesheets.length) {
+      return res.status(404).json({ error: 'No timesheets found for this employee' });
+    }
+
+    const employee = timesheets[0].employee;
+    const employee_name = `${employee.first_name} ${employee.middle_name ? employee.middle_name + ' ' : ''}${employee.last_name}`.trim();
+
+    const formatted = timesheets.map(t => ({
+      id: t.id,
+      date: t.date,
+      check_in: t.check_in,
+      check_out: t.check_out,
+      total_hours: t.total_hours
+    }));
+
+    res.json({
+      employee_id,
+      employee_name,
+      timesheets: formatted
+    });
+  } catch (error) {
+    console.error('Error fetching employee timesheets:', error);
+    res.status(500).json({ error: 'Failed to fetch timesheets' });
+  }
+}
 
   // === Get timesheets for a specific employee ===
-  async getEmployeeTimesheets(req, res) {
-    try {
-      const { employee_id } = req.params;
-      const timesheets = await db.Timesheet.findAll({
-        where: { employee_id },
-        order: [['date', 'ASC']]
-      });
-      res.json(timesheets);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch employee timesheets' });
-    }
-  }
+  // async getEmployeeTimesheets(req, res) {
+  //   try {
+  //     const { employee_id } = req.params;
+  //     const timesheets = await db.Timesheet.findAll({
+  //       where: { employee_id },
+  //       order: [['date', 'ASC']]
+  //     });
+  //     res.json(timesheets);
+  //   } catch (error) {
+  //     res.status(500).json({ error: 'Failed to fetch employee timesheets' });
+  //   }
+  // }
 }
 
 module.exports = new TimesheetController();

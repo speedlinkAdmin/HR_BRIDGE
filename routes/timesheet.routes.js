@@ -41,7 +41,7 @@ router.post('/upload', upload.single('timesheet'), TimesheetController.uploadTim
 router.post('/upload-upsert', upload.single('timesheet'), TimesheetController.uploadTimesheetWithSequelizeUpsert);
 
 // Optional: get timesheets
-router.get('/timesheets', TimesheetController.getAllTimesheets);
-router.get('/employees/:employee_id/timesheets', TimesheetController.getEmployeeTimesheets);
+router.get('/get', TimesheetController.getAllTimesheets);
+router.get('/employees/get', TimesheetController.getTimesheetsByEmployee);
 
 module.exports = router;
